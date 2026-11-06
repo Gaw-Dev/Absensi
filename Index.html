@@ -3,120 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Absensi WhatsApp Lagota</title>
+    <title>Absensi Lagota Cafe & Resto</title>
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --accent-color: #27ae60;
-            --wa-color: #25d366;
-            --bg-color: #f4f7f6;
+            --bg-cream: #fcf8f5;
+            --card-white: #ffffff;
+            --brown-primary: #5c4033;
+            --brown-dark: #3e2723;
+            --orange-accent: #e67e22;
+            --orange-hover: #d35400;
+            --text-main: #2c2c2c;
+            --text-muted: #7f8c8d;
+            --border-color: #e0d5cb;
         }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+            background-color: var(--bg-cream);
             margin: 0;
             padding: 20px;
-            color: #333;
+            color: var(--text-main);
         }
+
         .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 520px;
+            margin: 20px auto;
+            background: var(--card-white);
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(92, 64, 51, 0.08);
+            border: 1px solid var(--border-color);
         }
-        h2 {
+
+        .brand-header {
             text-align: center;
-            color: var(--primary-color);
             margin-bottom: 25px;
         }
-        .form-group {
-            margin-bottom: 20px;
+
+        .brand-header h2 {
+            color: var(--brown-dark);
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 5px 0;
+            letter-spacing: 0.5px;
         }
+
+        .brand-header p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .info-box {
+            background: #f7f1ec;
+            border-left: 4px solid var(--orange-accent);
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: var(--brown-primary);
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 600;
+            font-size: 13px;
+            color: var(--brown-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+
         input, select {
             width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+            padding: 12px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
             box-sizing: border-box;
             font-size: 14px;
+            background-color: #fdfbf9;
+            color: var(--text-main);
+            transition: all 0.3s ease;
         }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--orange-accent);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.1);
+        }
+
         .camera-box {
             text-align: center;
-            background: #000;
-            border-radius: 6px;
+            background: #111;
+            border-radius: 12px;
             overflow: hidden;
             position: relative;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
+
         video {
             width: 100%;
-            max-height: 400px;
+            max-height: 380px;
             display: block;
             object-fit: cover;
         }
+
         canvas { display: none; }
+
         .btn {
-            background-color: var(--accent-color);
+            background-color: var(--orange-accent);
             color: white;
-            padding: 12px 20px;
+            padding: 14px 20px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             width: 100%;
-            font-size: 16px;
-            font-weight: bold;
-            transition: background 0.3s;
+            font-size: 15px;
+            font-weight: 600;
+            transition: background 0.3s, transform 0.1s;
             margin-bottom: 10px;
+            letter-spacing: 0.5px;
         }
-        .btn:hover { background-color: #219653; }
+
+        .btn:hover { background-color: var(--orange-hover); }
+        .btn:active { transform: scale(0.99); }
+        
         .btn:disabled {
-            background-color: #95a5a6;
+            background-color: #dcd6d0;
             cursor: not-allowed;
+            color: #888;
         }
+
         .btn-camera {
-            background-color: #2980b9;
+            background-color: var(--brown-primary);
         }
-        .btn-camera:hover { background-color: #1f618d; }
+        .btn-camera:hover { background-color: var(--brown-dark); }
+
         .btn-wa {
-            background-color: var(--wa-color);
+            background-color: #27ae60;
         }
-        .btn-wa:hover { background-color: #1ebe5d; }
-        .info-box {
-            background: #eaf2f8;
-            border: 1px solid #a4b0be;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            color: #2c3e50;
-        }
+        .btn-wa:hover { background-color: #219653; }
+
         .instructions {
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-            color: #856404;
-            padding: 10px;
-            border-radius: 6px;
+            background: #fef8f0;
+            border: 1px solid #fce8d5;
+            color: #b9770e;
+            padding: 12px;
+            border-radius: 8px;
             font-size: 13px;
             margin-bottom: 15px;
             display: none;
+            line-height: 1.4;
         }
+
         #loading {
             display: none;
             text-align: center;
-            margin-top: 10px;
-            color: #e67e22;
-            font-weight: bold;
+            margin-top: 15px;
+            color: var(--orange-accent);
+            font-weight: 600;
+            font-size: 14px;
         }
+
         #photoResult {
             width: 100%;
-            border-radius: 6px;
+            border-radius: 8px;
             display: none;
         }
     </style>
@@ -124,20 +182,23 @@
 <body>
 
 <div class="container">
-    <h2>Absensi WhatsApp Lagota</h2>
+    <div class="brand-header">
+        <h2>Lago'Ta Cafe & Resto</h2>
+        <p>Sistem Absensi Karyawan Terverifikasi</p>
+    </div>
     
     <div class="info-box" id="statusLokasi">
-        <strong>Status Keamanan GPS:</strong> Mengunci koordinat akurat & mendeteksi Fake GPS...
+        <strong>Status GPS:</strong> Mengunci koordinat akurat & mendeteksi area kafe...
     </div>
 
     <form id="absensiForm">
         <div class="form-group">
-            <label for="nama">Nama Karyawan:</label>
+            <label for="nama">Nama Karyawan</label>
             <input type="text" id="nama" required placeholder="Masukkan nama lengkap">
         </div>
 
         <div class="form-group">
-            <label for="divisi">Pilih Divisi:</label>
+            <label for="divisi">Divisi</label>
             <select id="divisi" required>
                 <option value="">-- Pilih Divisi --</option>
                 <option value="Leader">Leader</option>
@@ -149,7 +210,7 @@
         </div>
 
         <div class="form-group">
-            <label for="tipeAbsen">Tipe Absen:</label>
+            <label for="tipeAbsen">Tipe Absen</label>
             <select id="tipeAbsen" required>
                 <option value="">-- Pilih Masuk / Pulang --</option>
                 <option value="Masuk">Absen Masuk</option>
@@ -158,7 +219,7 @@
         </div>
 
         <div class="form-group">
-            <label for="shift">Shift / Jenis Kerja:</label>
+            <label for="shift">Shift Kerja</label>
             <select id="shift" required>
                 <option value="">-- Pilih Shift --</option>
                 <option value="Shift 1">Shift 1</option>
@@ -167,30 +228,29 @@
             </select>
         </div>
 
-        <div class="info-box">
+        <div class="info-box" style="margin-bottom: 20px;">
             <strong>Waktu Real-time:</strong> <span id="waktuLive">-</span>
         </div>
 
         <div class="form-group">
-            <label>Foto Verifikasi Timemark:</label>
+            <label>Foto Verifikasi Timemark</label>
             <div class="camera-box">
                 <video id="video" autoplay playsinline></video>
                 <canvas id="canvas"></canvas>
                 <img id="photoResult" alt="Hasil Foto Timemark">
             </div>
-            <button type="button" id="snapBtn" class="btn btn-camera" disabled>Ambil Foto (Dengan Stamp)</button>
-            <button type="button" id="retakeBtn" class="btn btn-camera" style="display:none; background-color: #c0392b;">Foto Ulang</button>
+            <button type="button" id="snapBtn" class="btn btn-camera" disabled>Ambil Foto (Tunggu Kunci GPS)</button>
+            <button type="button" id="retakeBtn" class="btn btn-camera" style="display:none; background-color: #a0522d;">Foto Ulang</button>
         </div>
 
-        <!-- Panduan & Tombol Kirim -->
         <div id="waInstruction" class="instructions">
-            📌 <b>Cara Kirim ke WA:</b> Foto timemark telah otomatis terunduh ke HP Anda. Klik tombol hijau di bawah, lalu <b>lampirkan foto dari galeri</b> dan <b>tempel (paste) teks laporan</b> ke chat WhatsApp!
+            📌 <b>Panduan WhatsApp:</b> Foto berstempel peta & waktu telah terunduh ke HP Anda. Klik tombol hijau di bawah, lalu <b>tempel (paste) teks</b> dan <b>lampirkan foto</b> ke WhatsApp!
         </div>
 
         <button type="submit" id="submitBtn" class="btn" disabled>Simpan ke Spreadsheet</button>
         <button type="button" id="whatsappBtn" class="btn btn-wa" style="display:none;">Kirim Laporan ke WhatsApp</button>
         
-        <div id="loading">Memproses data... Mohon tunggu.</div>
+        <div id="loading">Memproses data & foto... Mohon tunggu sebentar.</div>
     </form>
 </div>
 
@@ -214,6 +274,8 @@
 
     let base64Image = "";
     let userAddressStr = "Lago'Ta Cafe Dan Resto, Jl. Jend. A. Yani, Parepare";
+    let userLat = LATITUDE_KAFE;
+    let userLon = LONGITUDE_KAFE;
     let isLocationValid = false;
     let formatPesanWA = "";
 
@@ -221,19 +283,19 @@
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    const userLat = position.coords.latitude;
-                    const userLon = position.coords.longitude;
+                    userLat = position.coords.latitude;
+                    userLon = position.coords.longitude;
                     const akurasiGPS = position.coords.accuracy;
                     
                     if (position.coords.mocked === true) {
-                        statusLokasi.innerHTML = `<strong>Peringatan Keamanan:</strong> <span style="color:red; font-weight:bold;">Terdeteksi menggunakan Fake GPS! Absensi ditolak.</span>`;
+                        statusLokasi.innerHTML = `<strong>Peringatan Keamanan:</strong> <span style="color:#c0392b;">Terdeteksi menggunakan Fake GPS! Absensi ditolak.</span>`;
                         submitBtn.disabled = true;
                         snapBtn.disabled = true;
                         return;
                     }
 
                     if (akurasiGPS > 120) {
-                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:orange;">Menunggu akurasi GPS stabil (${Math.round(akurasiGPS)}m)...</span>`;
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:#d35400;">Menunggu akurasi GPS stabil (${Math.round(akurasiGPS)}m)...</span>`;
                         setTimeout(kunciLokasiAkurat, 3000);
                         return;
                     }
@@ -250,19 +312,19 @@
                         .catch(() => {});
 
                     if (jarak <= MAKS_JARAK_METER) {
-                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:green; font-weight:bold;">Akurat! Di area kafe (±${Math.round(jarak)}m)</span>`;
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:#27ae60;">Akurat! Berada di area kafe (±${Math.round(jarak)}m)</span>`;
                         snapBtn.disabled = false;
-                        snapBtn.innerText = "Ambil Foto (Dengan Stamp)";
+                        snapBtn.innerText = "Ambil Foto (Dengan Peta & Stamp)";
                         isLocationValid = true;
                     } else {
-                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red; font-weight:bold;">Ditolak! Anda di luar area kafe (±${Math.round(jarak)}m).</span>`;
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:#c0392b;">Di luar area kafe (±${Math.round(jarak)}m dari titik pusat).</span>`;
                         snapBtn.disabled = true;
                         submitBtn.disabled = true;
                         isLocationValid = false;
                     }
                 },
                 (err) => {
-                    statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red;">Gagal membaca lokasi. Pastikan izin GPS aktif.</span>`;
+                    statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:#c0392b;">Gagal membaca lokasi. Pastikan izin GPS aktif.</span>`;
                     snapBtn.disabled = true;
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -303,7 +365,7 @@
         return result;
     }
 
-    snapBtn.addEventListener('click', () => {
+    snapBtn.addEventListener('click', async () => {
         if (!isLocationValid) {
             alert("Lokasi Anda belum valid di area kafe!");
             return;
@@ -325,25 +387,47 @@
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Watermark Canvas
+        try {
+            const mapImg = new Image();
+            mapImg.crossOrigin = "anonymous";
+            await new Promise((resolve) => {
+                mapImg.onload = () => {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.roundRect(30, 30, 140, 140, 12);
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = "#ffffff";
+                    ctx.stroke();
+                    ctx.clip();
+                    ctx.drawImage(mapImg, 30, 30, 140, 140);
+                    ctx.restore();
+                    resolve();
+                };
+                mapImg.onerror = () => { resolve(); };
+                mapImg.src = `https://tile.openstreetmap.org/16/51830/33420.png`;
+            });
+        } catch(e) {
+            ctx.fillStyle = "rgba(92, 64, 51, 0.9)";
+            ctx.fillRect(30, 30, 140, 140);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 14px sans-serif";
+            ctx.fillText("GPS MAPS", 60, 105);
+        }
+
+        // Logo Tag
         ctx.fillStyle = "#ffffff";
         ctx.shadowColor = "black";
         ctx.shadowBlur = 6;
         ctx.font = "bold 22px sans-serif";
-        ctx.fillText("Lagota", canvas.width - 130, 45);
+        ctx.fillText("Lagota", canvas.width - 130, 50);
         ctx.font = "12px sans-serif";
-        ctx.fillText("cafe & resto", canvas.width - 120, 62);
+        ctx.fillText("cafe & resto", canvas.width - 120, 68);
 
-        ctx.beginPath();
-        ctx.arc(45, 45, 12, 0, 2 * Math.PI);
-        ctx.fillStyle = "#00a8ff";
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
+        // Badge Status & Jam
         const badgeY = canvas.height - 200;
-        ctx.fillStyle = "#27ae60";
+        ctx.fillStyle = "#e67e22";
         ctx.fillRect(30, badgeY, 150, 38);
-        ctx.fillStyle = "#1e272e";
+        ctx.fillStyle = "#3e2723";
         ctx.fillRect(180, badgeY, 110, 38);
 
         ctx.fillStyle = "#ffffff";
@@ -378,13 +462,11 @@
         whatsappBtn.style.display = 'block';
         waInstruction.style.display = 'block';
 
-        // Otomatis unduh foto watermark ke HP
         const link = document.createElement('a');
         link.download = `Absen_${nama}_${tipeAbsen}_${new Date().getTime()}.jpg`;
         link.href = base64Image;
         link.click();
 
-        // Format Teks Laporan Rapi untuk WhatsApp
         formatPesanWA = `*LAPORAN ABSENSI LAGOTA CAFÉ*%0A` +
                         `----------------------------------------%0A` +
                         `👤 *Nama:* ${nama}%0A` +
@@ -395,7 +477,7 @@
                         `📍 *Lokasi:* ${userAddressStr}%0A` +
                         `🔑 *Kode Foto:* ${kodeFoto}%0A` +
                         `----------------------------------------%0A` +
-                        `_*(Silakan lampirkan foto absen di atas)*_`;
+                        `_*(Silakan lampirkan foto peta & absen di atas)*_`;
 
         let stream = video.srcObject;
         if(stream) stream.getTracks().forEach(track => track.stop());
@@ -433,14 +515,12 @@
             });
     });
 
-    // Tombol Kirim ke WhatsApp (Menyalin teks & membuka WA)
     whatsappBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(decodeURIComponent(formatPesanWA.replace(/%0A/g, '\n')));
-        alert("Format laporan telah disalin! Silakan pilih chat/grup WhatsApp, lalu tempel (paste) pesannya dan lampirkan foto absen yang baru saja terunduh di galeri Anda.");
+        alert("Format laporan telah disalin! Silakan pilih chat/grup WhatsApp, lalu tempel (paste) pesannya dan lampirkan foto dari galeri HP Anda.");
         window.open(`https://wa.me/?text=${formatPesanWA}`, '_blank');
     });
 
-    // Kirim ke Spreadsheet
     const form = document.getElementById('absensiForm');
     const loading = document.getElementById('loading');
 
