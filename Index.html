@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Absensi Secure Timemark Lagota</title>
+    <title>Absensi WhatsApp Lagota</title>
     <style>
         :root {
             --primary-color: #2c3e50;
             --accent-color: #27ae60;
+            --wa-color: #25d366;
             --bg-color: #f4f7f6;
         }
         body {
@@ -72,6 +73,7 @@
             font-size: 16px;
             font-weight: bold;
             transition: background 0.3s;
+            margin-bottom: 10px;
         }
         .btn:hover { background-color: #219653; }
         .btn:disabled {
@@ -80,9 +82,12 @@
         }
         .btn-camera {
             background-color: #2980b9;
-            margin-bottom: 10px;
         }
         .btn-camera:hover { background-color: #1f618d; }
+        .btn-wa {
+            background-color: var(--wa-color);
+        }
+        .btn-wa:hover { background-color: #1ebe5d; }
         .info-box {
             background: #eaf2f8;
             border: 1px solid #a4b0be;
@@ -109,7 +114,7 @@
 <body>
 
 <div class="container">
-    <h2>Absensi Secure Lagota</h2>
+    <h2>Absensi WhatsApp Lagota</h2>
     
     <div class="info-box" id="statusLokasi">
         <strong>Status Keamanan GPS:</strong> Mengunci koordinat akurat & mendeteksi Fake GPS...
@@ -157,7 +162,7 @@
         </div>
 
         <div class="form-group">
-            <label>Foto Verifikasi Timemark (Anti-Fake GPS):</label>
+            <label>Foto Verifikasi Timemark:</label>
             <div class="camera-box">
                 <video id="video" autoplay playsinline></video>
                 <canvas id="canvas"></canvas>
@@ -167,18 +172,21 @@
             <button type="button" id="retakeBtn" class="btn btn-camera" style="display:none; background-color: #c0392b;">Foto Ulang</button>
         </div>
 
-        <button type="submit" id="submitBtn" class="btn" disabled>Kirim Absensi</button>
-        <div id="loading">Memproses verifikasi lokasi & mengirim data... Mohon tunggu.</div>
+        <!-- Tombol Kirim ke Spreadsheet & Kirim ke WhatsApp -->
+        <button type="submit" id="submitBtn" class="btn" disabled>Simpan ke Spreadsheet</button>
+        <button type="button" id="whatsappBtn" class="btn btn-wa" style="display:none;">Kirim Laporan & Foto ke WhatsApp</button>
+        
+        <div id="loading">Memproses data... Mohon tunggu.</div>
     </form>
 </div>
 
 <script>
     const scriptURL = 'PASTE_URL_WEB_APP_ANDA_DI_SINI';
 
-    // Titik Koordinat Pusat Kafe Lagota (Sesuaikan titik pastinya)
-    const LATITUDE_KAFE = -4.0084;   
-    const LONGITUDE_KAFE = 119.6258; 
-    const MAKS_JARAK_METER = 50; // Diperketat maksimal radius 50 meter agar sangat akurat di area kafe
+    // TITIK KOORDINAT LAGO'TA CAFE & RESTO PAREPARE
+    const LATITUDE_KAFE = -4.011088;   
+    const LONGITUDE_KAFE = 119.634748; 
+    const MAKS_JARAK_METER = 150; 
 
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
@@ -188,38 +196,35 @@
     const waktuLive = document.getElementById('waktuLive');
     const statusLokasi = document.getElementById('statusLokasi');
     const submitBtn = document.getElementById('submitBtn');
+    const whatsappBtn = document.getElementById('whatsappBtn');
 
     let base64Image = "";
-    let userAddressStr = "Lagota Cafe Dan Resto, Parepare";
+    let userAddressStr = "Lago'Ta Cafe Dan Resto, Jl. Jend. A. Yani, Parepare";
     let isLocationValid = false;
 
-    // 1. Validasi GPS Ketat & Deteksi Mock Location (Fake GPS)
     function kunciLokasiAkurat() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const userLat = position.coords.latitude;
                     const userLon = position.coords.longitude;
-                    const akurasiGPS = position.coords.accuracy; // Tingkat akurasi dalam meter
+                    const akurasiGPS = position.coords.accuracy;
                     
-                    // Deteksi indikasi Fake GPS (Biasanya mock location atau akurasi terlalu janggal/sempurna)
                     if (position.coords.mocked === true) {
-                        statusLokasi.innerHTML = `<strong>Peringatan Keamanan:</strong> <span style="color:red; font-weight:bold;">Terdeteksi menggunakan Fake GPS / Lokasi Palsu! Absensi ditolak.</span>`;
+                        statusLokasi.innerHTML = `<strong>Peringatan Keamanan:</strong> <span style="color:red; font-weight:bold;">Terdeteksi menggunakan Fake GPS! Absensi ditolak.</span>`;
                         submitBtn.disabled = true;
                         snapBtn.disabled = true;
                         return;
                     }
 
-                    // Jika akurasi GPS HP terlalu lemah (> 50 meter), minta tunggu sampai satelit akurat
-                    if (akurasiGPS > 50) {
-                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:orange;">Akurasi GPS kurang (${Math.round(akurasiGPS)}m). Harap pindah ke area terbuka...</span>`;
-                        setTimeout(kunciLokasiAkurat, 3000); // Coba ulang deteksi setelah 3 detik
+                    if (akurasiGPS > 120) {
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:orange;">Menunggu akurasi GPS stabil (${Math.round(akurasiGPS)}m)...</span>`;
+                        setTimeout(kunciLokasiAkurat, 3000);
                         return;
                     }
 
                     const jarak = hitungJarak(userLat, userLon, LATITUDE_KAFE, LONGITUDE_KAFE);
                     
-                    // Ambil alamat asli via reverse geocoding
                     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLon}`)
                         .then(res => res.json())
                         .then(data => {
@@ -230,19 +235,19 @@
                         .catch(() => {});
 
                     if (jarak <= MAKS_JARAK_METER) {
-                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:green; font-weight:bold;">Akurat! Dalam area kafe (±${Math.round(jarak)}m, Akurasi: ${Math.round(akurasiGPS)}m)</span>`;
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:green; font-weight:bold;">Akurat! Di area kafe (±${Math.round(jarak)}m, Akurasi: ${Math.round(akurasiGPS)}m)</span>`;
                         snapBtn.disabled = false;
                         snapBtn.innerText = "Ambil Foto (Dengan Stamp)";
                         isLocationValid = true;
                     } else {
-                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red; font-weight:bold;">Ditolak! Anda di luar area kafe (±${Math.round(jarak)}m dari titik pusat).</span>`;
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red; font-weight:bold;">Ditolak! Anda di luar area kafe (±${Math.round(jarak)}m dari titik kafe).</span>`;
                         snapBtn.disabled = true;
                         submitBtn.disabled = true;
                         isLocationValid = false;
                     }
                 },
                 (err) => {
-                    statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red;">Gagal membaca lokasi. Pastikan GPS HP Aktif & High Accuracy dinyalakan.</span>`;
+                    statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red;">Gagal membaca lokasi. Pastikan izin GPS aktif.</span>`;
                     snapBtn.disabled = true;
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -262,21 +267,16 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // Jalankan pengecekan lokasi secara berkala setiap 5 detik agar karyawan tidak bisa kabur setelah buka halaman web
     window.onload = () => {
         kunciLokasiAkurat();
         setInterval(kunciLokasiAkurat, 5000); 
     };
 
-    // 2. Jam Real-time Berjalan (Terkunci ke detik saat ini)
-    let currentJamString = "";
     setInterval(() => {
         const now = new Date();
-        currentJamString = now.toLocaleTimeString('id-ID');
         waktuLive.innerText = now.toLocaleString('id-ID');
     }, 1000);
 
-    // 3. Akses Kamera Live
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
         .then(stream => { video.srcObject = stream; })
         .catch(err => { alert("Izin kamera diperlukan untuk absensi!"); });
@@ -290,7 +290,6 @@
         return result;
     }
 
-    // 4. Ambil Foto & Watermark Timemark Otomatis
     snapBtn.addEventListener('click', () => {
         if (!isLocationValid) {
             alert("Lokasi Anda belum valid di area kafe!");
@@ -311,7 +310,6 @@
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Watermark Overlay Style Timemark
         ctx.fillStyle = "#ffffff";
         ctx.shadowColor = "black";
         ctx.shadowBlur = 6;
@@ -320,14 +318,12 @@
         ctx.font = "12px sans-serif";
         ctx.fillText("cafe & resto", canvas.width - 120, 62);
 
-        // Pin Lokasi
         ctx.beginPath();
         ctx.arc(45, 45, 12, 0, 2 * Math.PI);
         ctx.fillStyle = "#00a8ff";
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Badge Status & Jam
         const badgeY = canvas.height - 200;
         ctx.fillStyle = "#27ae60";
         ctx.fillRect(30, badgeY, 150, 38);
@@ -362,7 +358,8 @@
 
         snapBtn.style.display = 'none';
         retakeBtn.style.display = 'block';
-        submitBtn.disabled = false; // Tombol kirim terbuka setelah foto diambil di area valid
+        submitBtn.disabled = false;
+        whatsappBtn.style.display = 'block'; // Tombol WhatsApp muncul setelah foto diambil
 
         let stream = video.srcObject;
         if(stream) stream.getTracks().forEach(track => track.stop());
@@ -394,11 +391,35 @@
                 retakeBtn.style.display = 'none';
                 snapBtn.style.display = 'block';
                 submitBtn.disabled = true;
+                whatsappBtn.style.display = 'none';
                 base64Image = "";
             });
     });
 
-    // 5. Submit Form
+    // 5. Kirim ke WhatsApp
+    whatsappBtn.addEventListener('click', () => {
+        const nama = document.getElementById('nama').value;
+        const divisi = document.getElementById('divisi').value;
+        const tipeAbsen = document.getElementById('tipeAbsen').value;
+        const shift = document.getElementById('shift').value;
+        const now = new Date().toLocaleString('id-ID');
+
+        const pesan = `*LAPORAN ABSENSI LAGOTA*%0A` +
+                      `----------------------------------%0A` +
+                      `👤 *Nama:* ${nama}%0A` +
+                      `🏢 *Divisi:* ${divisi}%0A` +
+                      `📌 *Status:* Absen ${tipeAbsen}%0A` +
+                      `⏰ *Shift:* ${shift}%0A` +
+                      `📅 *Waktu:* ${now}%0A` +
+                      `📍 *Lokasi:* Valid di Area Kafe%0A` +
+                      `----------------------------------%0A` +
+                      `_(Foto bukti timemark telah terverifikasi GPS)_`;
+
+        // Buka WhatsApp dengan pesan teks otomatis
+        window.open(`https://wa.me/?text=${pesan}`, '_blank');
+    });
+
+    // 6. Submit ke Spreadsheet
     const form = document.getElementById('absensiForm');
     const loading = document.getElementById('loading');
 
@@ -433,9 +454,7 @@
         })
         .then(() => {
             loading.style.display = 'none';
-            alert("Absensi berhasil dikirim secara akurat dan aman!");
-            form.reset();
-            location.reload();
+            alert("Absensi berhasil disimpan ke Spreadsheet!");
         })
         .catch(error => {
             loading.style.display = 'none';
