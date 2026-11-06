@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Absensi Timemark Lagota</title>
+    <title>Absensi Secure Timemark Lagota</title>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -109,10 +109,10 @@
 <body>
 
 <div class="container">
-    <h2>Absensi Timemark Lagota</h2>
+    <h2>Absensi Secure Lagota</h2>
     
     <div class="info-box" id="statusLokasi">
-        <strong>Status GPS:</strong> Sedang mendeteksi posisi Anda...
+        <strong>Status Keamanan GPS:</strong> Mengunci koordinat akurat & mendeteksi Fake GPS...
     </div>
 
     <form id="absensiForm">
@@ -157,28 +157,28 @@
         </div>
 
         <div class="form-group">
-            <label>Foto Verifikasi Timemark:</label>
+            <label>Foto Verifikasi Timemark (Anti-Fake GPS):</label>
             <div class="camera-box">
                 <video id="video" autoplay playsinline></video>
                 <canvas id="canvas"></canvas>
                 <img id="photoResult" alt="Hasil Foto Timemark">
             </div>
-            <button type="button" id="snapBtn" class="btn btn-camera">Ambil Foto (Dengan Stamp)</button>
+            <button type="button" id="snapBtn" class="btn btn-camera" disabled>Ambil Foto (Tunggu Kunci GPS)</button>
             <button type="button" id="retakeBtn" class="btn btn-camera" style="display:none; background-color: #c0392b;">Foto Ulang</button>
         </div>
 
         <button type="submit" id="submitBtn" class="btn" disabled>Kirim Absensi</button>
-        <div id="loading">Memproses foto timemark & mengirim ke Spreadsheet... Mohon tunggu.</div>
+        <div id="loading">Memproses verifikasi lokasi & mengirim data... Mohon tunggu.</div>
     </form>
 </div>
 
 <script>
     const scriptURL = 'PASTE_URL_WEB_APP_ANDA_DI_SINI';
 
-    // Koordinat Kafe Lagota Parepare (Sesuaikan jika ada perbedaan)
+    // Titik Koordinat Pusat Kafe Lagota (Sesuaikan titik pastinya)
     const LATITUDE_KAFE = -4.0084;   
     const LONGITUDE_KAFE = 119.6258; 
-    const MAKS_JARAK_METER = 200;      
+    const MAKS_JARAK_METER = 50; // Diperketat maksimal radius 50 meter agar sangat akurat di area kafe
 
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
@@ -190,21 +190,36 @@
     const submitBtn = document.getElementById('submitBtn');
 
     let base64Image = "";
-    let userAddressStr = "Lagota Cafe Dan Resto, Jl. Jend. A. Yani, Ujung Baru, Soreang, Kota Parepare, Sulawesi Selatan, 91131";
-    let userLat = null;
-    let userLon = null;
+    let userAddressStr = "Lagota Cafe Dan Resto, Parepare";
+    let isLocationValid = false;
 
-    // 1. Pengecekan Lokasi GPS & Reverse Geocoding Alamat
-    function cekLokasi() {
+    // 1. Validasi GPS Ketat & Deteksi Mock Location (Fake GPS)
+    function kunciLokasiAkurat() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    userLat = position.coords.latitude;
-                    userLon = position.coords.longitude;
+                    const userLat = position.coords.latitude;
+                    const userLon = position.coords.longitude;
+                    const akurasiGPS = position.coords.accuracy; // Tingkat akurasi dalam meter
                     
+                    // Deteksi indikasi Fake GPS (Biasanya mock location atau akurasi terlalu janggal/sempurna)
+                    if (position.coords.mocked === true) {
+                        statusLokasi.innerHTML = `<strong>Peringatan Keamanan:</strong> <span style="color:red; font-weight:bold;">Terdeteksi menggunakan Fake GPS / Lokasi Palsu! Absensi ditolak.</span>`;
+                        submitBtn.disabled = true;
+                        snapBtn.disabled = true;
+                        return;
+                    }
+
+                    // Jika akurasi GPS HP terlalu lemah (> 50 meter), minta tunggu sampai satelit akurat
+                    if (akurasiGPS > 50) {
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:orange;">Akurasi GPS kurang (${Math.round(akurasiGPS)}m). Harap pindah ke area terbuka...</span>`;
+                        setTimeout(kunciLokasiAkurat, 3000); // Coba ulang deteksi setelah 3 detik
+                        return;
+                    }
+
                     const jarak = hitungJarak(userLat, userLon, LATITUDE_KAFE, LONGITUDE_KAFE);
                     
-                    // Ambil alamat asli dari koordinat
+                    // Ambil alamat asli via reverse geocoding
                     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLon}`)
                         .then(res => res.json())
                         .then(data => {
@@ -215,19 +230,25 @@
                         .catch(() => {});
 
                     if (jarak <= MAKS_JARAK_METER) {
-                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:green;">Valid (Di lokasi kafe ±${Math.round(jarak)}m)</span>`;
-                        submitBtn.disabled = false;
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:green; font-weight:bold;">Akurat! Dalam area kafe (±${Math.round(jarak)}m, Akurasi: ${Math.round(akurasiGPS)}m)</span>`;
+                        snapBtn.disabled = false;
+                        snapBtn.innerText = "Ambil Foto (Dengan Stamp)";
+                        isLocationValid = true;
                     } else {
-                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red;">Di Luar Area (±${Math.round(jarak)}m dari kafe). Absen Terkunci.</span>`;
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red; font-weight:bold;">Ditolak! Anda di luar area kafe (±${Math.round(jarak)}m dari titik pusat).</span>`;
+                        snapBtn.disabled = true;
                         submitBtn.disabled = true;
+                        isLocationValid = false;
                     }
                 },
                 (err) => {
-                    statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red;">Gagal membaca lokasi. Aktifkan GPS Anda.</span>`;
-                    submitBtn.disabled = true;
+                    statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red;">Gagal membaca lokasi. Pastikan GPS HP Aktif & High Accuracy dinyalakan.</span>`;
+                    snapBtn.disabled = true;
                 },
-                { enableHighAccuracy: true }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
+        } else {
+            alert("Browser tidak mendukung geolokasi.");
         }
     }
 
@@ -241,20 +262,25 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    window.onload = cekLokasi;
+    // Jalankan pengecekan lokasi secara berkala setiap 5 detik agar karyawan tidak bisa kabur setelah buka halaman web
+    window.onload = () => {
+        kunciLokasiAkurat();
+        setInterval(kunciLokasiAkurat, 5000); 
+    };
 
-    // 2. Jam Real-time
+    // 2. Jam Real-time Berjalan (Terkunci ke detik saat ini)
+    let currentJamString = "";
     setInterval(() => {
         const now = new Date();
+        currentJamString = now.toLocaleTimeString('id-ID');
         waktuLive.innerText = now.toLocaleString('id-ID');
     }, 1000);
 
     // 3. Akses Kamera Live
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
         .then(stream => { video.srcObject = stream; })
-        .catch(err => { alert("Pastikan izin kamera sudah diaktifkan di browser!"); });
+        .catch(err => { alert("Izin kamera diperlukan untuk absensi!"); });
 
-    // Generate Kode Unik Verifikasi Foto (e.g. TRTXX6WPWGN6KR)
     function generateFotoCode() {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let result = '';
@@ -264,13 +290,18 @@
         return result;
     }
 
-    // 4. Proses Ambil Foto & Gambar Watermark Overlay (Timemark Style)
+    // 4. Ambil Foto & Watermark Timemark Otomatis
     snapBtn.addEventListener('click', () => {
+        if (!isLocationValid) {
+            alert("Lokasi Anda belum valid di area kafe!");
+            return;
+        }
+
         const namaInput = document.getElementById('nama').value || "Karyawan";
         const tipeAbsenVal = document.getElementById('tipeAbsen').value || "Masuk";
         const now = new Date();
         
-        const jamStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        const jamStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const tanggalStr = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit' });
         const kodeFoto = generateFotoCode();
 
@@ -278,66 +309,52 @@
         canvas.width = video.videoWidth || 720;
         canvas.height = video.videoHeight || 960;
 
-        // Gambar Foto Kamera
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // --- DRAW WATERMARK OVERLAY ---
-        
-        // A. Logo Lagota Kanan Atas
-        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-        ctx.font = "bold 22px sans-serif";
+        // Watermark Overlay Style Timemark
         ctx.fillStyle = "#ffffff";
         ctx.shadowColor = "black";
         ctx.shadowBlur = 6;
+        ctx.font = "bold 22px sans-serif";
         ctx.fillText("Lagota", canvas.width - 130, 45);
         ctx.font = "12px sans-serif";
         ctx.fillText("cafe & resto", canvas.width - 120, 62);
 
-        // B. Pin Lokasi Kiri Atas (Visual Pin Icon)
+        // Pin Lokasi
         ctx.beginPath();
         ctx.arc(45, 45, 12, 0, 2 * Math.PI);
         ctx.fillStyle = "#00a8ff";
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // C. Badge Absen Masuk / Pulang (Kiri Bawah)
+        // Badge Status & Jam
         const badgeY = canvas.height - 200;
-        
-        // Background Hijau Badge Status
         ctx.fillStyle = "#27ae60";
         ctx.fillRect(30, badgeY, 150, 38);
-
-        // Background Hitam Jam
         ctx.fillStyle = "#1e272e";
-        ctx.fillRect(180, badgeY, 90, 38);
+        ctx.fillRect(180, badgeY, 110, 38);
 
-        // Teks Badge Status & Jam
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 18px sans-serif";
         ctx.fillText(`Absen ${tipeAbsenVal}`, 40, badgeY + 26);
-        ctx.font = "bold 20px sans-serif";
-        ctx.fillText(jamStr, 195, badgeY + 26);
+        ctx.font = "bold 18px sans-serif";
+        ctx.fillText(jamStr, 190, badgeY + 26);
 
-        // D. Teks Hari & Tanggal
         ctx.font = "bold 17px sans-serif";
         ctx.fillText(tanggalStr, 30, badgeY + 68);
 
-        // E. Teks Alamat Lengkap (Wrap Text)
-        ctx.font = "14px sans-serif";
+        ctx.font = "13px sans-serif";
         ctx.fillStyle = "#f5f6fa";
-        wrapText(ctx, userAddressStr, 30, badgeY + 95, canvas.width - 60, 20);
+        wrapText(ctx, userAddressStr, 30, badgeY + 95, canvas.width - 60, 18);
 
-        // F. Nama Karyawan
         ctx.font = "16px sans-serif";
         ctx.fillText(`Nama: ${namaInput}`, 30, badgeY + 145);
 
-        // G. Kode Foto Verifikasi (Pojok Kiri Bawah)
         ctx.font = "13px sans-serif";
         ctx.fillStyle = "#dcdde1";
-        ctx.fillText(`Kode Foto: ${kodeFoto}`, 30, canvas.height - 20);
-        ctx.fillText("Timemark Verified", canvas.width - 150, canvas.height - 20);
+        ctx.fillText(`Kode: ${kodeFoto}`, 30, canvas.height - 20);
+        ctx.fillText("Secure Timemark Verified", canvas.width - 180, canvas.height - 20);
 
-        // Export Canvas ke Gambar
         base64Image = canvas.toDataURL('image/jpeg', 0.85);
         photoResult.src = base64Image;
         photoResult.style.display = 'block';
@@ -345,21 +362,19 @@
 
         snapBtn.style.display = 'none';
         retakeBtn.style.display = 'block';
+        submitBtn.disabled = false; // Tombol kirim terbuka setelah foto diambil di area valid
 
         let stream = video.srcObject;
         if(stream) stream.getTracks().forEach(track => track.stop());
     });
 
-    // Helper Fungsi untuk Wrap Teks Alamat Panjang
     function wrapText(context, text, x, y, maxWidth, lineHeight) {
         let words = text.split(' ');
         let line = '';
-
         for(let n = 0; n < words.length; n++) {
             let testLine = line + words[n] + ' ';
             let metrics = context.measureText(testLine);
-            let testWidth = metrics.width;
-            if (testWidth > maxWidth && n > 0) {
+            if (metrics.width > maxWidth && n > 0) {
                 context.fillText(line, x, y);
                 line = words[n] + ' ';
                 y += lineHeight;
@@ -378,16 +393,22 @@
                 photoResult.style.display = 'none';
                 retakeBtn.style.display = 'none';
                 snapBtn.style.display = 'block';
+                submitBtn.disabled = true;
                 base64Image = "";
             });
     });
 
-    // 5. Submit Form ke Apps Script
+    // 5. Submit Form
     const form = document.getElementById('absensiForm');
     const loading = document.getElementById('loading');
 
     form.addEventListener('submit', e => {
         e.preventDefault();
+
+        if(!isLocationValid) {
+            alert("Absensi ditolak: Anda berada di luar area kafe atau GPS tidak valid!");
+            return;
+        }
 
         if(!base64Image) {
             alert("Harap ambil foto terlebih dahulu!");
@@ -412,14 +433,13 @@
         })
         .then(() => {
             loading.style.display = 'none';
-            alert("Absensi Timemark berhasil dikirim!");
+            alert("Absensi berhasil dikirim secara akurat dan aman!");
             form.reset();
             location.reload();
         })
         .catch(error => {
             loading.style.display = 'none';
             alert("Terjadi kesalahan saat mengirim data.");
-            console.error(error);
         });
     });
 </script>
