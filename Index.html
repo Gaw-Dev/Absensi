@@ -97,6 +97,16 @@
             font-size: 14px;
             color: #2c3e50;
         }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            display: none;
+        }
         #loading {
             display: none;
             text-align: center;
@@ -168,13 +178,17 @@
                 <canvas id="canvas"></canvas>
                 <img id="photoResult" alt="Hasil Foto Timemark">
             </div>
-            <button type="button" id="snapBtn" class="btn btn-camera" disabled>Ambil Foto (Tunggu Kunci GPS)</button>
+            <button type="button" id="snapBtn" class="btn btn-camera" disabled>Ambil Foto (Dengan Stamp)</button>
             <button type="button" id="retakeBtn" class="btn btn-camera" style="display:none; background-color: #c0392b;">Foto Ulang</button>
         </div>
 
-        <!-- Tombol Kirim ke Spreadsheet & Kirim ke WhatsApp -->
+        <!-- Panduan & Tombol Kirim -->
+        <div id="waInstruction" class="instructions">
+            📌 <b>Cara Kirim ke WA:</b> Foto timemark telah otomatis terunduh ke HP Anda. Klik tombol hijau di bawah, lalu <b>lampirkan foto dari galeri</b> dan <b>tempel (paste) teks laporan</b> ke chat WhatsApp!
+        </div>
+
         <button type="submit" id="submitBtn" class="btn" disabled>Simpan ke Spreadsheet</button>
-        <button type="button" id="whatsappBtn" class="btn btn-wa" style="display:none;">Kirim Laporan & Foto ke WhatsApp</button>
+        <button type="button" id="whatsappBtn" class="btn btn-wa" style="display:none;">Kirim Laporan ke WhatsApp</button>
         
         <div id="loading">Memproses data... Mohon tunggu.</div>
     </form>
@@ -183,7 +197,6 @@
 <script>
     const scriptURL = 'PASTE_URL_WEB_APP_ANDA_DI_SINI';
 
-    // TITIK KOORDINAT LAGO'TA CAFE & RESTO PAREPARE
     const LATITUDE_KAFE = -4.011088;   
     const LONGITUDE_KAFE = 119.634748; 
     const MAKS_JARAK_METER = 150; 
@@ -197,10 +210,12 @@
     const statusLokasi = document.getElementById('statusLokasi');
     const submitBtn = document.getElementById('submitBtn');
     const whatsappBtn = document.getElementById('whatsappBtn');
+    const waInstruction = document.getElementById('waInstruction');
 
     let base64Image = "";
     let userAddressStr = "Lago'Ta Cafe Dan Resto, Jl. Jend. A. Yani, Parepare";
     let isLocationValid = false;
+    let formatPesanWA = "";
 
     function kunciLokasiAkurat() {
         if (navigator.geolocation) {
@@ -235,12 +250,12 @@
                         .catch(() => {});
 
                     if (jarak <= MAKS_JARAK_METER) {
-                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:green; font-weight:bold;">Akurat! Di area kafe (±${Math.round(jarak)}m, Akurasi: ${Math.round(akurasiGPS)}m)</span>`;
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:green; font-weight:bold;">Akurat! Di area kafe (±${Math.round(jarak)}m)</span>`;
                         snapBtn.disabled = false;
                         snapBtn.innerText = "Ambil Foto (Dengan Stamp)";
                         isLocationValid = true;
                     } else {
-                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red; font-weight:bold;">Ditolak! Anda di luar area kafe (±${Math.round(jarak)}m dari titik kafe).</span>`;
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red; font-weight:bold;">Ditolak! Anda di luar area kafe (±${Math.round(jarak)}m).</span>`;
                         snapBtn.disabled = true;
                         submitBtn.disabled = true;
                         isLocationValid = false;
@@ -252,8 +267,6 @@
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
-        } else {
-            alert("Browser tidak mendukung geolokasi.");
         }
     }
 
@@ -296,8 +309,10 @@
             return;
         }
 
-        const namaInput = document.getElementById('nama').value || "Karyawan";
-        const tipeAbsenVal = document.getElementById('tipeAbsen').value || "Masuk";
+        const nama = document.getElementById('nama').value || "Karyawan";
+        const divisi = document.getElementById('divisi').value || "-";
+        const tipeAbsen = document.getElementById('tipeAbsen').value || "Masuk";
+        const shift = document.getElementById('shift').value || "-";
         const now = new Date();
         
         const jamStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -310,6 +325,7 @@
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+        // Watermark Canvas
         ctx.fillStyle = "#ffffff";
         ctx.shadowColor = "black";
         ctx.shadowBlur = 6;
@@ -332,7 +348,7 @@
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 18px sans-serif";
-        ctx.fillText(`Absen ${tipeAbsenVal}`, 40, badgeY + 26);
+        ctx.fillText(`Absen ${tipeAbsen}`, 40, badgeY + 26);
         ctx.font = "bold 18px sans-serif";
         ctx.fillText(jamStr, 190, badgeY + 26);
 
@@ -344,7 +360,7 @@
         wrapText(ctx, userAddressStr, 30, badgeY + 95, canvas.width - 60, 18);
 
         ctx.font = "16px sans-serif";
-        ctx.fillText(`Nama: ${namaInput}`, 30, badgeY + 145);
+        ctx.fillText(`Nama: ${nama}`, 30, badgeY + 145);
 
         ctx.font = "13px sans-serif";
         ctx.fillStyle = "#dcdde1";
@@ -359,7 +375,27 @@
         snapBtn.style.display = 'none';
         retakeBtn.style.display = 'block';
         submitBtn.disabled = false;
-        whatsappBtn.style.display = 'block'; // Tombol WhatsApp muncul setelah foto diambil
+        whatsappBtn.style.display = 'block';
+        waInstruction.style.display = 'block';
+
+        // Otomatis unduh foto watermark ke HP
+        const link = document.createElement('a');
+        link.download = `Absen_${nama}_${tipeAbsen}_${new Date().getTime()}.jpg`;
+        link.href = base64Image;
+        link.click();
+
+        // Format Teks Laporan Rapi untuk WhatsApp
+        formatPesanWA = `*LAPORAN ABSENSI LAGOTA CAFÉ*%0A` +
+                        `----------------------------------------%0A` +
+                        `👤 *Nama:* ${nama}%0A` +
+                        `🏢 *Divisi:* ${divisi}%0A` +
+                        `📌 *Status:* Absen ${tipeAbsen}%0A` +
+                        `⏰ *Shift:* ${shift}%0A` +
+                        `📅 *Waktu:* ${tanggalStr}, ${jamStr}%0A` +
+                        `📍 *Lokasi:* ${userAddressStr}%0A` +
+                        `🔑 *Kode Foto:* ${kodeFoto}%0A` +
+                        `----------------------------------------%0A` +
+                        `_*(Silakan lampirkan foto absen di atas)*_`;
 
         let stream = video.srcObject;
         if(stream) stream.getTracks().forEach(track => track.stop());
@@ -392,34 +428,19 @@
                 snapBtn.style.display = 'block';
                 submitBtn.disabled = true;
                 whatsappBtn.style.display = 'none';
+                waInstruction.style.display = 'none';
                 base64Image = "";
             });
     });
 
-    // 5. Kirim ke WhatsApp
+    // Tombol Kirim ke WhatsApp (Menyalin teks & membuka WA)
     whatsappBtn.addEventListener('click', () => {
-        const nama = document.getElementById('nama').value;
-        const divisi = document.getElementById('divisi').value;
-        const tipeAbsen = document.getElementById('tipeAbsen').value;
-        const shift = document.getElementById('shift').value;
-        const now = new Date().toLocaleString('id-ID');
-
-        const pesan = `*LAPORAN ABSENSI LAGOTA*%0A` +
-                      `----------------------------------%0A` +
-                      `👤 *Nama:* ${nama}%0A` +
-                      `🏢 *Divisi:* ${divisi}%0A` +
-                      `📌 *Status:* Absen ${tipeAbsen}%0A` +
-                      `⏰ *Shift:* ${shift}%0A` +
-                      `📅 *Waktu:* ${now}%0A` +
-                      `📍 *Lokasi:* Valid di Area Kafe%0A` +
-                      `----------------------------------%0A` +
-                      `_(Foto bukti timemark telah terverifikasi GPS)_`;
-
-        // Buka WhatsApp dengan pesan teks otomatis
-        window.open(`https://wa.me/?text=${pesan}`, '_blank');
+        navigator.clipboard.writeText(decodeURIComponent(formatPesanWA.replace(/%0A/g, '\n')));
+        alert("Format laporan telah disalin! Silakan pilih chat/grup WhatsApp, lalu tempel (paste) pesannya dan lampirkan foto absen yang baru saja terunduh di galeri Anda.");
+        window.open(`https://wa.me/?text=${formatPesanWA}`, '_blank');
     });
 
-    // 6. Submit ke Spreadsheet
+    // Kirim ke Spreadsheet
     const form = document.getElementById('absensiForm');
     const loading = document.getElementById('loading');
 
