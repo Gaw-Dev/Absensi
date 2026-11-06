@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Absensi Timemark Lagota</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #27ae60;
+            --bg-color: #f4f7f6;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .camera-box {
+            text-align: center;
+            background: #000;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 10px;
+        }
+        video {
+            width: 100%;
+            max-height: 400px;
+            display: block;
+            object-fit: cover;
+        }
+        canvas { display: none; }
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .btn:hover { background-color: #219653; }
+        .btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .btn-camera {
+            background-color: #2980b9;
+            margin-bottom: 10px;
+        }
+        .btn-camera:hover { background-color: #1f618d; }
+        .info-box {
+            background: #eaf2f8;
+            border: 1px solid #a4b0be;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+            color: #e67e22;
+            font-weight: bold;
+        }
+        #photoResult {
+            width: 100%;
+            border-radius: 6px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Absensi Timemark Lagota</h2>
+    
+    <div class="info-box" id="statusLokasi">
+        <strong>Status GPS:</strong> Sedang mendeteksi posisi Anda...
+    </div>
+
+    <form id="absensiForm">
+        <div class="form-group">
+            <label for="nama">Nama Karyawan:</label>
+            <input type="text" id="nama" required placeholder="Masukkan nama lengkap">
+        </div>
+
+        <div class="form-group">
+            <label for="divisi">Pilih Divisi:</label>
+            <select id="divisi" required>
+                <option value="">-- Pilih Divisi --</option>
+                <option value="Leader">Leader</option>
+                <option value="Waiter">Waiter</option>
+                <option value="Kitchen">Kitchen</option>
+                <option value="Bar">Bar</option>
+                <option value="Lain-lain">Lain-lain</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="tipeAbsen">Tipe Absen:</label>
+            <select id="tipeAbsen" required>
+                <option value="">-- Pilih Masuk / Pulang --</option>
+                <option value="Masuk">Absen Masuk</option>
+                <option value="Pulang">Absen Pulang</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="shift">Shift / Jenis Kerja:</label>
+            <select id="shift" required>
+                <option value="">-- Pilih Shift --</option>
+                <option value="Shift 1">Shift 1</option>
+                <option value="Shift 2">Shift 2</option>
+                <option value="Lembur">Lembur</option>
+            </select>
+        </div>
+
+        <div class="info-box">
+            <strong>Waktu Real-time:</strong> <span id="waktuLive">-</span>
+        </div>
+
+        <div class="form-group">
+            <label>Foto Verifikasi Timemark:</label>
+            <div class="camera-box">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+                <img id="photoResult" alt="Hasil Foto Timemark">
+            </div>
+            <button type="button" id="snapBtn" class="btn btn-camera">Ambil Foto (Dengan Stamp)</button>
+            <button type="button" id="retakeBtn" class="btn btn-camera" style="display:none; background-color: #c0392b;">Foto Ulang</button>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn" disabled>Kirim Absensi</button>
+        <div id="loading">Memproses foto timemark & mengirim ke Spreadsheet... Mohon tunggu.</div>
+    </form>
+</div>
+
+<script>
+    const scriptURL = 'PASTE_URL_WEB_APP_ANDA_DI_SINI';
+
+    // Koordinat Kafe Lagota Parepare (Sesuaikan jika ada perbedaan)
+    const LATITUDE_KAFE = -4.0084;   
+    const LONGITUDE_KAFE = 119.6258; 
+    const MAKS_JARAK_METER = 200;      
+
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const photoResult = document.getElementById('photoResult');
+    const snapBtn = document.getElementById('snapBtn');
+    const retakeBtn = document.getElementById('retakeBtn');
+    const waktuLive = document.getElementById('waktuLive');
+    const statusLokasi = document.getElementById('statusLokasi');
+    const submitBtn = document.getElementById('submitBtn');
+
+    let base64Image = "";
+    let userAddressStr = "Lagota Cafe Dan Resto, Jl. Jend. A. Yani, Ujung Baru, Soreang, Kota Parepare, Sulawesi Selatan, 91131";
+    let userLat = null;
+    let userLon = null;
+
+    // 1. Pengecekan Lokasi GPS & Reverse Geocoding Alamat
+    function cekLokasi() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    userLat = position.coords.latitude;
+                    userLon = position.coords.longitude;
+                    
+                    const jarak = hitungJarak(userLat, userLon, LATITUDE_KAFE, LONGITUDE_KAFE);
+                    
+                    // Ambil alamat asli dari koordinat
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLon}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if(data && data.display_name) {
+                                userAddressStr = data.display_name;
+                            }
+                        })
+                        .catch(() => {});
+
+                    if (jarak <= MAKS_JARAK_METER) {
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:green;">Valid (Di lokasi kafe ±${Math.round(jarak)}m)</span>`;
+                        submitBtn.disabled = false;
+                    } else {
+                        statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red;">Di Luar Area (±${Math.round(jarak)}m dari kafe). Absen Terkunci.</span>`;
+                        submitBtn.disabled = true;
+                    }
+                },
+                (err) => {
+                    statusLokasi.innerHTML = `<strong>Status GPS:</strong> <span style="color:red;">Gagal membaca lokasi. Aktifkan GPS Anda.</span>`;
+                    submitBtn.disabled = true;
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+    }
+
+    function hitungJarak(lat1, lon1, lat2, lon2) {
+        const R = 6371e3;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    window.onload = cekLokasi;
+
+    // 2. Jam Real-time
+    setInterval(() => {
+        const now = new Date();
+        waktuLive.innerText = now.toLocaleString('id-ID');
+    }, 1000);
+
+    // 3. Akses Kamera Live
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+        .then(stream => { video.srcObject = stream; })
+        .catch(err => { alert("Pastikan izin kamera sudah diaktifkan di browser!"); });
+
+    // Generate Kode Unik Verifikasi Foto (e.g. TRTXX6WPWGN6KR)
+    function generateFotoCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < 16; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+
+    // 4. Proses Ambil Foto & Gambar Watermark Overlay (Timemark Style)
+    snapBtn.addEventListener('click', () => {
+        const namaInput = document.getElementById('nama').value || "Karyawan";
+        const tipeAbsenVal = document.getElementById('tipeAbsen').value || "Masuk";
+        const now = new Date();
+        
+        const jamStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        const tanggalStr = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit' });
+        const kodeFoto = generateFotoCode();
+
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth || 720;
+        canvas.height = video.videoHeight || 960;
+
+        // Gambar Foto Kamera
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // --- DRAW WATERMARK OVERLAY ---
+        
+        // A. Logo Lagota Kanan Atas
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.font = "bold 22px sans-serif";
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = "black";
+        ctx.shadowBlur = 6;
+        ctx.fillText("Lagota", canvas.width - 130, 45);
+        ctx.font = "12px sans-serif";
+        ctx.fillText("cafe & resto", canvas.width - 120, 62);
+
+        // B. Pin Lokasi Kiri Atas (Visual Pin Icon)
+        ctx.beginPath();
+        ctx.arc(45, 45, 12, 0, 2 * Math.PI);
+        ctx.fillStyle = "#00a8ff";
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // C. Badge Absen Masuk / Pulang (Kiri Bawah)
+        const badgeY = canvas.height - 200;
+        
+        // Background Hijau Badge Status
+        ctx.fillStyle = "#27ae60";
+        ctx.fillRect(30, badgeY, 150, 38);
+
+        // Background Hitam Jam
+        ctx.fillStyle = "#1e272e";
+        ctx.fillRect(180, badgeY, 90, 38);
+
+        // Teks Badge Status & Jam
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 18px sans-serif";
+        ctx.fillText(`Absen ${tipeAbsenVal}`, 40, badgeY + 26);
+        ctx.font = "bold 20px sans-serif";
+        ctx.fillText(jamStr, 195, badgeY + 26);
+
+        // D. Teks Hari & Tanggal
+        ctx.font = "bold 17px sans-serif";
+        ctx.fillText(tanggalStr, 30, badgeY + 68);
+
+        // E. Teks Alamat Lengkap (Wrap Text)
+        ctx.font = "14px sans-serif";
+        ctx.fillStyle = "#f5f6fa";
+        wrapText(ctx, userAddressStr, 30, badgeY + 95, canvas.width - 60, 20);
+
+        // F. Nama Karyawan
+        ctx.font = "16px sans-serif";
+        ctx.fillText(`Nama: ${namaInput}`, 30, badgeY + 145);
+
+        // G. Kode Foto Verifikasi (Pojok Kiri Bawah)
+        ctx.font = "13px sans-serif";
+        ctx.fillStyle = "#dcdde1";
+        ctx.fillText(`Kode Foto: ${kodeFoto}`, 30, canvas.height - 20);
+        ctx.fillText("Timemark Verified", canvas.width - 150, canvas.height - 20);
+
+        // Export Canvas ke Gambar
+        base64Image = canvas.toDataURL('image/jpeg', 0.85);
+        photoResult.src = base64Image;
+        photoResult.style.display = 'block';
+        video.style.display = 'none';
+
+        snapBtn.style.display = 'none';
+        retakeBtn.style.display = 'block';
+
+        let stream = video.srcObject;
+        if(stream) stream.getTracks().forEach(track => track.stop());
+    });
+
+    // Helper Fungsi untuk Wrap Teks Alamat Panjang
+    function wrapText(context, text, x, y, maxWidth, lineHeight) {
+        let words = text.split(' ');
+        let line = '';
+
+        for(let n = 0; n < words.length; n++) {
+            let testLine = line + words[n] + ' ';
+            let metrics = context.measureText(testLine);
+            let testWidth = metrics.width;
+            if (testWidth > maxWidth && n > 0) {
+                context.fillText(line, x, y);
+                line = words[n] + ' ';
+                y += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        context.fillText(line, x, y);
+    }
+
+    retakeBtn.addEventListener('click', () => {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+            .then(stream => {
+                video.srcObject = stream;
+                video.style.display = 'block';
+                photoResult.style.display = 'none';
+                retakeBtn.style.display = 'none';
+                snapBtn.style.display = 'block';
+                base64Image = "";
+            });
+    });
+
+    // 5. Submit Form ke Apps Script
+    const form = document.getElementById('absensiForm');
+    const loading = document.getElementById('loading');
+
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+
+        if(!base64Image) {
+            alert("Harap ambil foto terlebih dahulu!");
+            return;
+        }
+
+        loading.style.display = 'block';
+
+        const data = {
+            nama: document.getElementById('nama').value,
+            divisi: document.getElementById('divisi').value,
+            tipeAbsen: document.getElementById('tipeAbsen').value,
+            shift: document.getElementById('shift').value,
+            foto: base64Image
+        };
+
+        fetch(scriptURL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(() => {
+            loading.style.display = 'none';
+            alert("Absensi Timemark berhasil dikirim!");
+            form.reset();
+            location.reload();
+        })
+        .catch(error => {
+            loading.style.display = 'none';
+            alert("Terjadi kesalahan saat mengirim data.");
+            console.error(error);
+        });
+    });
+</script>
+
+</body>
+</html>
